@@ -1,5 +1,3 @@
-//Contains how the synchronization logic works
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -29,24 +27,22 @@ typedef struct {
     int total_time;       // time served
 } instance_slot_t;
 
-// Argument structure passed into each worker thread
-//UNDERSTAND
+// struct passed into each worker thread
 typedef struct {
     int party_id;
     int t1;
     int t2;
 } party_args_t;
 
-// Global array allocated dynamically in engine based on n - TO-DO : don't i already have this in matchmaker
+// global array 
 static instance_slot_t *instances = NULL;
 static int global_n = 0;                  // number of instances
 static int total_parties_formed = 0;       // number of total parties 
 
-static pthread_mutex_t instance_mutex = PTHREAD_MUTEX_INITIALIZER; // Protects instances array & print statements
-static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;      // Protects thread log output
+static pthread_mutex_t instance_mutex = PTHREAD_MUTEX_INITIALIZER; // protects instances array and print statements
+static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;      // proetcts thread log output
 
 //CURRENT STATUS OF ALL AVAILABLE INSTANCES - EMPTY / ACTIVE
-//UNDERTAND: EVERY WHEN IS THIS SHOWN
 void print_instance_status(void)        
 {
     printf("-- Current Instance Status --\n");
@@ -79,15 +75,15 @@ void print_summary(double total_wall_time)
 }
 
 //matchmakes - handles 1 team
-void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come from and why *
+void *matchmaker_thread(void *arg)         
 {                
 
-    // 1. Unpack struct argument passed via pthread_create UNDERSTAND
+    // unpack struct argument
     party_args_t *args = (party_args_t *)arg;
     int party_id = args->party_id;
     int t1 = args->t1;
     int t2 = args->t2;
-    free(args); // Free argument heap allocation once unpacked
+    free(args); //argument heap allocation
 
     //1 CLAIM ROLES - assigned a team
 
@@ -98,9 +94,6 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
     sem_wait(&dps_queue);     
     sem_wait(&dps_queue);     
 
-
-    //UPDATE 
-
     pthread_mutex_lock(&log_mutex);
     printf("[Party %d] Formed! Waiting for an available dungeon instance...\n", party_id);
     pthread_mutex_unlock(&log_mutex);
@@ -108,10 +101,9 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
     //wait for dungeon instance slot
     sem_wait(&dungeon_instances);
 
-    // 4. FIND AN EMPTY SLOT (0 to n-1) & MARK AS "active"
+    // FIND AN EMPTY SLOT and MARK AS active
     int assigned_instance = -1;
 
-    //TO-DO: IS THIS CLEAR TIME GOOD
     int clear_time = t1;
     if (t2 > t1) {
         clear_time = t1 + rand() % (t2 - t1 + 1);
@@ -127,7 +119,7 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
         }
     }
 
-    // Update instance stats
+    // update instance stats
     instances[assigned_instance].total_parties++;
     instances[assigned_instance].total_time += clear_time;
 
@@ -151,12 +143,11 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
     return NULL;
 }
 
-// Implementation Function 1: Initialization / Engine Entry
 void engine(int n, int t, int h, int d, int t1, int t2) 
 {
-    srand(time(NULL)); // UNDERSTAND Seed RNG for random clear times 
+    srand(time(NULL)); // Seed RNG for random clear times 
 
-    global_n = n; // Save n for global status functions
+    global_n = n;
 
     //initialize semaphores
     sem_init(&dungeon_instances, 0, n); // n available dungeon slots
@@ -165,14 +156,14 @@ void engine(int n, int t, int h, int d, int t1, int t2)
     sem_init(&dps_queue, 0, d);         // d DPS available
 
 
-// 2. Allocate instances array on the heap
+// allocate instances array on the heap
     instances = calloc(n, sizeof(instance_slot_t));
     if (!instances) {
         perror("Failed to allocate instances array");
         return;
     }
 
-    //there should be 1 tank, 1 healer, and 3 DPS per party. 
+    //there should be 1 tank, 1 healer, and 3 DPS per party
     int dps_parties = d / 3; // each party requires 3 DPS players
     int max_parties = t;
     if (h < max_parties) max_parties = h;
@@ -190,10 +181,10 @@ void engine(int n, int t, int h, int d, int t1, int t2)
 
     time_t start_time = time(NULL);
 
-    // 4. Allocate thread handles array
+    // allocate thread handles array
     pthread_t *threads = malloc(sizeof(pthread_t) * max_parties);
 
-    // 5. SPAWN MATCHMAKER THREADS CONCURRENTLY
+    // SPAWN MATCHMAKER THREADS CONCURRENTLY
     for (int i = 0; i < max_parties; i++) {
         party_args_t *args = malloc(sizeof(party_args_t));
         args->party_id = i + 1;
@@ -203,7 +194,7 @@ void engine(int n, int t, int h, int d, int t1, int t2)
         pthread_create(&threads[i], NULL, matchmaker_thread, args);
     }
 
-    // 6. JOIN THREADS (Wait for all parties to clear dungeons)
+    // JOIN THREADS (Wait for all parties to clear dungeons)
     for (int i = 0; i < max_parties; i++) {
         pthread_join(threads[i], NULL);
     }
@@ -232,10 +223,10 @@ void cleanup(void)
     pthread_mutex_destroy(&log_mutex);
     pthread_mutex_destroy(&instance_mutex);
 
-    // 3. Free dynamically allocated heap memory for instance tracking - UNDERSTAND 
+    // free heap memory for instance tracking
     if (instances != NULL) {
         free(instances);
-        instances = NULL; // Prevent dangling pointer
+        instances = NULL;
     }
 }
 

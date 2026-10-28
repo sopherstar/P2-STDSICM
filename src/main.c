@@ -1,4 +1,4 @@
-//sets up the program, kicks off the engine, and cleans up when finished
+//sets up the program and calls the engine
 
 #include <stdio.h>
 #include <stdlib.h>
