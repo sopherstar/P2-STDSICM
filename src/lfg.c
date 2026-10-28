@@ -30,8 +30,7 @@ typedef struct {
 // struct passed into each worker thread
 typedef struct {
     int party_id;
-    int t1;
-    int t2;
+    int clear_time;
 } party_args_t;
 
 // global array 
@@ -70,7 +69,7 @@ void print_summary(double total_wall_time)
     printf("=======================================================\n");
     printf("Total Parties Served Across All Instances : %d\n", total_parties_formed);
     printf("Cumulative Instance Active Time           : %d seconds\n", cumulative_instance_time);
-    printf("Actual Real-World Elapsed Time            : %.0f seconds\n", total_wall_time);
+    printf("Actual Elapsed Time            : %.0f seconds\n", total_wall_time);
     printf("=======================================================\n\n");
 }
 
@@ -81,8 +80,7 @@ void *matchmaker_thread(void *arg)
     // unpack struct argument
     party_args_t *args = (party_args_t *)arg;
     int party_id = args->party_id;
-    int t1 = args->t1;
-    int t2 = args->t2;
+    int clear_time = args->clear_time;
     free(args); //argument heap allocation
 
     //1 CLAIM ROLES - assigned a team
@@ -103,11 +101,6 @@ void *matchmaker_thread(void *arg)
 
     // FIND AN EMPTY SLOT and MARK AS active
     int assigned_instance = -1;
-
-    int clear_time = t1;
-    if (t2 > t1) {
-        clear_time = t1 + rand() % (t2 - t1 + 1);
-    }
 
     pthread_mutex_lock(&instance_mutex);
     for (int i = 0; i < global_n; i++) {
@@ -188,8 +181,10 @@ void engine(int n, int t, int h, int d, int t1, int t2)
     for (int i = 0; i < max_parties; i++) {
         party_args_t *args = malloc(sizeof(party_args_t));
         args->party_id = i + 1;
-        args->t1 = t1;
-        args->t2 = t2;
+        args->clear_time = t1;
+        if (t2 > t1) {
+            args->clear_time = t1 + rand() % (t2 - t1 + 1);
+        }
 
         pthread_create(&threads[i], NULL, matchmaker_thread, args);
     }
@@ -229,7 +224,6 @@ void cleanup(void)
         instances = NULL;
     }
 }
-
 
 
 
