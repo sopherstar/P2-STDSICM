@@ -91,11 +91,12 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
 
     //1 CLAIM ROLES - assigned a team
 
-    sem_wait(&tank_queue);    // Decrements available tanks by 1
-    sem_wait(&healer_queue);  // Decrements available healers by 1
-    sem_wait(&dps_queue);     // Decrements available DPS by 1
-    sem_wait(&dps_queue);     // Decrements available DPS by 1
-    sem_wait(&dps_queue);     // Decrements available DPS by 1
+    //decrements available
+    sem_wait(&tank_queue);    
+    sem_wait(&healer_queue);  
+    sem_wait(&dps_queue);     
+    sem_wait(&dps_queue);     
+    sem_wait(&dps_queue);     
 
 
     //UPDATE 
@@ -104,7 +105,7 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
     printf("[Party %d] Formed! Waiting for an available dungeon instance...\n", party_id);
     pthread_mutex_unlock(&log_mutex);
 
-    //2 Wait for Dungeon Instance Slot (sem_wait)
+    //wait for dungeon instance slot
     sem_wait(&dungeon_instances);
 
     // 4. FIND AN EMPTY SLOT (0 to n-1) & MARK AS "active"
@@ -118,7 +119,8 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
 
     pthread_mutex_lock(&instance_mutex);
     for (int i = 0; i < global_n; i++) {
-        if (!instances[i].is_active) {
+        if (!instances[i].is_active) 
+        {
             instances[i].is_active = true;
             assigned_instance = i;
             break;
@@ -131,20 +133,19 @@ void *matchmaker_thread(void *arg)          //UNDERSTAND - where did arg come fr
 
     printf("\n -> [Party %d] ENTERED Instance %d (Clear time: %ds)\n", 
            party_id, assigned_instance + 1, clear_time);
-    print_instance_status(); // Display status update upon entry
+    print_instance_status(); // display status upon entry
     pthread_mutex_unlock(&instance_mutex);
 
-    //4 Simulate Run -> sleep(t)
     sleep(clear_time);
 
-    // 6. LEAVE DUNGEON & MARK SLOT AS "empty"
+    // leave and mark as empty
     pthread_mutex_lock(&instance_mutex);
     instances[assigned_instance].is_active = false;
     printf("\n <- [Party %d] CLEARED Instance %d\n", party_id, assigned_instance + 1);
-    print_instance_status(); // Display status update upon exit
+    print_instance_status(); //print status
     pthread_mutex_unlock(&instance_mutex);
 
-    //5 Leave Dungeon -> Release Instance Slot (sem_post)
+    //release instance slot
     sem_post(&dungeon_instances);
 
     return NULL;
@@ -176,7 +177,6 @@ void engine(int n, int t, int h, int d, int t1, int t2)
     int max_parties = t;
     if (h < max_parties) max_parties = h;
     if (dps_parties < max_parties) max_parties = dps_parties;
-    //max_parties = min(t, h, dps_parties); 
 
     total_parties_formed = max_parties;
 
